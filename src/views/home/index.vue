@@ -10,7 +10,9 @@
     <Layout>
       <!-- 头部区域 -->
       <Top v-if="state.show" :ruler="state.ruler" @update:ruler="rulerSwitch"></Top>
-      <Content style="display: flex; height: calc(100vh - 64px); position: relative">
+      <Content
+        style="display: flex; height: calc(100vh - 45px); position: relative; overflow: hidden"
+      >
         <!-- 左侧区域 -->
         <Left v-if="state.show"></Left>
         <!-- 画布区域 -->

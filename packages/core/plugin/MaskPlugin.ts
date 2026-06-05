@@ -47,7 +47,7 @@ class MaskPlugin implements IPluginTempl {
       // 如果有 则删除
       workspaceMask && this.canvas.remove(workspaceMask);
       this.workspace?.clone((cloned: fabric.Rect) => {
-        this.canvas.clipPath = cloned;
+        this.canvas.clipPath = undefined;
         this.coverMask = null;
         this.canvas.requestRenderAll();
       });

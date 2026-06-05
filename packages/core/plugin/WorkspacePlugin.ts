@@ -178,9 +178,9 @@ class WorkspacePlugin implements IPluginTempl {
     if (!this.workspace) return;
     this.setCenterFromObject(this.workspace);
 
-    // 超出画布不展示
+    // 超出画布也展示
     this.workspace.clone((cloned: fabric.Rect) => {
-      this.canvas.clipPath = cloned;
+      // this.canvas.clipPath = cloned;
       this.canvas.requestRenderAll();
     });
     if (cb) cb(this.workspace.left, this.workspace.top);

@@ -252,11 +252,30 @@ class ServersPlugin implements IPluginTempl {
       fabric.fontPaths = {
         ...fontOption,
       };
-      const dataUrl = this.canvas.toSVG(svgOption);
-      const fileStr = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dataUrl)}`;
-      this.editor.hooksEntity.hookSaveAfter.callAsync(fileStr, () => {
-        downFile(fileStr, 'svg');
-      });
+
+      const workspace = this.canvas.getObjects().find((item) => item.id === 'workspace');
+      if (workspace) {
+        workspace.clone((cloned: fabric.Rect) => {
+          this.canvas.clipPath = cloned;
+          this.canvas.renderAll();
+
+          const dataUrl = this.canvas.toSVG(svgOption);
+          const fileStr = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dataUrl)}`;
+
+          this.canvas.clipPath = undefined;
+          this.canvas.renderAll();
+
+          this.editor.hooksEntity.hookSaveAfter.callAsync(fileStr, () => {
+            downFile(fileStr, 'svg');
+          });
+        });
+      } else {
+        const dataUrl = this.canvas.toSVG(svgOption);
+        const fileStr = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dataUrl)}`;
+        this.editor.hooksEntity.hookSaveAfter.callAsync(fileStr, () => {
+          downFile(fileStr, 'svg');
+        });
+      }
     });
   }
 
@@ -264,10 +283,28 @@ class ServersPlugin implements IPluginTempl {
     this.editor.hooksEntity.hookSaveBefore.callAsync('', () => {
       const option = this._getSaveOption();
       this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-      const dataUrl = this.canvas.toDataURL(option);
-      this.editor.hooksEntity.hookSaveAfter.callAsync(dataUrl, () => {
-        downFile(dataUrl, 'png');
-      });
+
+      const workspace = this.canvas.getObjects().find((item) => item.id === 'workspace');
+      if (workspace) {
+        workspace.clone((cloned: fabric.Rect) => {
+          this.canvas.clipPath = cloned;
+          this.canvas.renderAll();
+
+          const dataUrl = this.canvas.toDataURL(option);
+
+          this.canvas.clipPath = undefined;
+          this.canvas.renderAll();
+
+          this.editor.hooksEntity.hookSaveAfter.callAsync(dataUrl, () => {
+            downFile(dataUrl, 'png');
+          });
+        });
+      } else {
+        const dataUrl = this.canvas.toDataURL(option);
+        this.editor.hooksEntity.hookSaveAfter.callAsync(dataUrl, () => {
+          downFile(dataUrl, 'png');
+        });
+      }
     });
   }
 
@@ -276,11 +313,29 @@ class ServersPlugin implements IPluginTempl {
       this.editor.hooksEntity.hookSaveBefore.callAsync('', () => {
         const option = this._getSaveOption();
         this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-        this.canvas.renderAll();
-        const dataUrl = this.canvas.toDataURL(option);
-        this.editor.hooksEntity.hookSaveAfter.callAsync(dataUrl, () => {
-          resolve(dataUrl);
-        });
+
+        const workspace = this.canvas.getObjects().find((item) => item.id === 'workspace');
+        if (workspace) {
+          workspace.clone((cloned: fabric.Rect) => {
+            this.canvas.clipPath = cloned;
+            this.canvas.renderAll();
+
+            const dataUrl = this.canvas.toDataURL(option);
+
+            this.canvas.clipPath = undefined;
+            this.canvas.renderAll();
+
+            this.editor.hooksEntity.hookSaveAfter.callAsync(dataUrl, () => {
+              resolve(dataUrl);
+            });
+          });
+        } else {
+          this.canvas.renderAll();
+          const dataUrl = this.canvas.toDataURL(option);
+          this.editor.hooksEntity.hookSaveAfter.callAsync(dataUrl, () => {
+            resolve(dataUrl);
+          });
+        }
       });
     });
   }
