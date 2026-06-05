@@ -24,6 +24,7 @@
             <zoom></zoom>
           </div>
         </div>
+        <Slides v-if="state.show"></Slides>
         <Right v-if="state.show"></Right>
       </Content>
     </Layout>
@@ -31,9 +32,13 @@
 </template>
 
 <script name="Home" setup lang="ts">
+import { ref, reactive, onMounted, onUnmounted, nextTick, provide, computed } from 'vue';
 import Top from './components/top/index.vue';
 import Left from './components/left/index.vue';
 import Right from './components/right/index.vue';
+import Slides from './components/right/Slides.vue';
+import { v4 as uuid } from 'uuid';
+import { useDebounceFn } from '@vueuse/core';
 
 import zoom from '@/components/zoom.vue';
 import dragMode from '@/components/dragMode.vue';
@@ -88,7 +93,7 @@ const state = reactive({
   ruler: true,
 });
 
-onMounted(() => {
+onMounted(async () => {
   // 初始化fabric
   const canvas = new fabric.Canvas('canvas', {
     fireRightClick: true, // 启用右键，button的数字为3
@@ -144,6 +149,17 @@ onMounted(() => {
   if (state.ruler) {
     canvasEditor.rulerEnable();
   }
+
+  // 初始化多画布 Slides
+  await initSlides();
+
+  // 监听画布的变动，更新缩略图和 canvasData
+  canvasEditor.canvas.on('object:added', updateCurrentSlideData);
+  canvasEditor.canvas.on('object:modified', updateCurrentSlideData);
+  canvasEditor.canvas.on('object:removed', updateCurrentSlideData);
+  // 监听标尺或自定义尺寸改变
+  canvasEditor.on('sizeChange', updateCurrentSlideData);
+  canvasEditor.on('loadJson', updateCurrentSlideData);
 });
 
 onUnmounted(() => canvasEditor.destory());
@@ -157,8 +173,200 @@ const rulerSwitch = (val) => {
   document.activeElement.blur();
 };
 
+// --- Slides 多页状态管理开始 ---
+interface Slide {
+  id: string;
+  title: string;
+  thumbnail: string;
+  canvasData: any;
+}
+
+const slides = ref<Slide[]>([]);
+const activeSlideId = ref<string>('');
+const slidesBarShow = ref(true);
+
+// 初始化 slides 数据，将当前已经就绪的画布状态存为第 1 页
+const initSlides = async () => {
+  const initialId = uuid();
+  const initialJson = canvasEditor.getJson();
+  slides.value = [
+    {
+      id: initialId,
+      title: '1 Untitled',
+      thumbnail: '',
+      canvasData: initialJson,
+    },
+  ];
+  activeSlideId.value = initialId;
+
+  // 渲染第一帧缩略图
+  nextTick(async () => {
+    try {
+      slides.value[0].thumbnail = await canvasEditor.preview();
+    } catch (e) {
+      console.error('Failed to generate initial slide thumbnail', e);
+    }
+  });
+};
+
+// 切换 slide
+const switchSlide = async (slideId: string) => {
+  if (slideId === activeSlideId.value) return;
+
+  // 1. 保存当前活跃幻灯片最新状态
+  const currentSlide = slides.value.find((s) => s.id === activeSlideId.value);
+  if (currentSlide) {
+    currentSlide.canvasData = canvasEditor.getJson();
+    try {
+      currentSlide.thumbnail = await canvasEditor.preview();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // 2. 切换当前 ID
+  activeSlideId.value = slideId;
+
+  // 3. 加载目标 slide 数据到画布上
+  const targetSlide = slides.value.find((s) => s.id === slideId);
+  if (targetSlide) {
+    canvasEditor.clear();
+    await canvasEditor.loadJSON(targetSlide.canvasData);
+  }
+};
+
+// 新增空白 slide
+const addNewSlide = async () => {
+  // 1. 保存当前 slide 状态
+  const currentSlide = slides.value.find((s) => s.id === activeSlideId.value);
+  if (currentSlide) {
+    currentSlide.canvasData = canvasEditor.getJson();
+    try {
+      currentSlide.thumbnail = await canvasEditor.preview();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // 2. 获取当前 workspace 宽高和背景填充，用于新建页的继承
+  const workspace = canvasEditor.canvas.getObjects().find((o: any) => o.id === 'workspace');
+  const width = workspace?.width || 900;
+  const height = workspace?.height || 1200;
+  const fill = workspace?.fill || 'rgba(255,255,255,1)';
+
+  // 3. 构建空白 JSON 画布数据
+  canvasEditor.clear();
+  canvasEditor.setSize(width, height);
+  canvasEditor.setWorkspaseBg(fill);
+  const emptyCanvasData = canvasEditor.getJson();
+
+  // 4. 创建新页并切换
+  const newId = uuid();
+  const newSlide: Slide = {
+    id: newId,
+    title: `${slides.value.length + 1} Untitled`,
+    thumbnail: '',
+    canvasData: emptyCanvasData,
+  };
+  slides.value.push(newSlide);
+  activeSlideId.value = newId;
+
+  // 生成缩略图
+  nextTick(async () => {
+    try {
+      newSlide.thumbnail = await canvasEditor.preview();
+    } catch (e) {
+      console.error(e);
+    }
+  });
+};
+
+// 复制 slide
+const duplicateSlide = async (slide: Slide) => {
+  if (slide.id === activeSlideId.value) {
+    slide.canvasData = canvasEditor.getJson();
+    try {
+      slide.thumbnail = await canvasEditor.preview();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  const newSlide: Slide = {
+    id: uuid(),
+    title: `${slide.title} Copy`,
+    thumbnail: slide.thumbnail,
+    canvasData: JSON.parse(JSON.stringify(slide.canvasData)),
+  };
+
+  const idx = slides.value.findIndex((s) => s.id === slide.id);
+  if (idx !== -1) {
+    slides.value.splice(idx + 1, 0, newSlide);
+  } else {
+    slides.value.push(newSlide);
+  }
+
+  await switchSlide(newSlide.id);
+};
+
+// 删除 slide
+const deleteSlide = async (slideId: string) => {
+  if (slides.value.length <= 1) return;
+
+  const idx = slides.value.findIndex((s) => s.id === slideId);
+  if (idx === -1) return;
+
+  const isActive = slideId === activeSlideId.value;
+  slides.value.splice(idx, 1);
+
+  if (isActive) {
+    const nextIdx = idx === 0 ? 0 : idx - 1;
+    const nextSlide = slides.value[nextIdx];
+    activeSlideId.value = nextSlide.id;
+    canvasEditor.clear();
+    await canvasEditor.loadJSON(nextSlide.canvasData);
+  }
+};
+
+// 重命名 slide
+const renameSlide = (slideId: string, title: string) => {
+  const slide = slides.value.find((s) => s.id === slideId);
+  if (slide) {
+    slide.title = title;
+  }
+};
+
+// 拖拽排序后更新 slides 列表
+const updateSlidesOrder = (newSlides: Slide[]) => {
+  slides.value = newSlides;
+};
+
+// 防抖更新当前画布最新的缩略图和 canvasData 到状态中
+const updateCurrentSlideData = useDebounceFn(async () => {
+  const currentSlide = slides.value.find((s) => s.id === activeSlideId.value);
+  if (currentSlide && canvasEditor) {
+    try {
+      currentSlide.canvasData = canvasEditor.getJson();
+      currentSlide.thumbnail = await canvasEditor.preview();
+    } catch (e) {
+      console.error('Failed to update slide thumbnail', e);
+    }
+  }
+}, 1000);
+// --- Slides 多页状态管理结束 ---
+
 provide('fabric', fabric);
 provide('canvasEditor', canvasEditor);
+provide('slides', slides);
+provide('activeSlideId', activeSlideId);
+provide('switchSlide', switchSlide);
+provide('addNewSlide', addNewSlide);
+provide('duplicateSlide', duplicateSlide);
+provide('deleteSlide', deleteSlide);
+provide('renameSlide', renameSlide);
+provide('updateSlidesOrder', updateSlidesOrder);
+provide('updateCurrentSlideData', updateCurrentSlideData);
+provide('slidesBarShow', slidesBarShow);
 // provide('mixinState', mixinState);
 </script>
 

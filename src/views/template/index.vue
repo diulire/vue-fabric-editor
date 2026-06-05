@@ -83,7 +83,7 @@
 </template>
 
 <script name="Home" setup>
-import { toRaw } from 'vue';
+import { toRaw, ref, reactive, nextTick } from 'vue';
 import { Spin } from 'view-ui-plus';
 import qs from 'qs';
 import proIcon from '@/assets/icon/proIcon.png';

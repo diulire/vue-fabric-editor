@@ -259,5 +259,35 @@
     "addTemplCheckTip": "模板名称不能为空"
   },
   "mine": "我的",
-  "batch": "批量"
+  "batch": "批量",
+  "slides": {
+    "title": "幻灯片",
+    "add": "添加幻灯片",
+    "present": "演示播放",
+    "rename": "重命名",
+    "duplicate": "复制",
+    "delete": "删除",
+    "delete_confirm": "确定删除该幻灯片吗？",
+    "at_least_one": "必须保留至少一个幻灯片",
+    "untitled": "未命名幻灯片",
+    "exit_present": "退出演示",
+    "prev_page": "上一页",
+    "next_page": "下一页",
+    "export_title": "导出你的幻灯片",
+    "select_slides": "选择幻灯片",
+    "all_slides": "所有幻灯片",
+    "current_slide": "当前幻灯片",
+    "custom_range": "自定义范围",
+    "custom_range_placeholder": "如: 1,3-5",
+    "file_type": "文件类型",
+    "transparent_bg": "透明背景",
+    "dimensions": "尺寸 / 规格",
+    "dimension_disabled_tip": "由于您要导出的是多个大小不一的幻灯片，因此无法在这里更改尺寸。",
+    "resolution": "分辨率 / 决定",
+    "dpi_72": "72 DPI (用于网页的低分辨率版本)",
+    "dpi_150": "150 DPI (中分辨率，用于演示)",
+    "dpi_300": "300 DPI (高分辨率，用于出版/印刷)",
+    "download": "下载",
+    "invalid_range": "请输入正确的页码范围"
+  }
 }

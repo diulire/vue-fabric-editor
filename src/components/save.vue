@@ -29,10 +29,12 @@
         </DropdownMenu>
       </template>
     </Dropdown>
+    <ExportModal v-model="exportModalVisible" />
   </div>
 </template>
 
 <script setup name="save-bar">
+import { ref } from 'vue';
 import { Modal } from 'view-ui-plus';
 import useSelect from '@/hooks/select';
 import useMaterial from '@/hooks/useMaterial';
@@ -41,13 +43,15 @@ import { useI18n } from 'vue-i18n';
 import { Spin } from 'view-ui-plus';
 import { useRoute } from 'vue-router';
 import { Message } from 'view-ui-plus';
+import ExportModal from './ExportModal.vue';
+
 const route = useRoute();
-
 const { createTmplByCommon, updataTemplInfo, routerToId } = useMaterial();
-
 const { t } = useI18n();
-
 const { canvasEditor } = useSelect();
+
+const exportModalVisible = ref(false);
+
 const cbMap = {
   async clipboard() {
     try {
@@ -64,7 +68,7 @@ const cbMap = {
     canvasEditor.saveSvg();
   },
   saveImg() {
-    canvasEditor.saveImg();
+    exportModalVisible.value = true;
   },
   async clipboardBase64() {
     try {

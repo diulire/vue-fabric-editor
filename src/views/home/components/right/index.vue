@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { ref, inject, computed } from 'vue';
 import align from '@/components/align.vue';
 import centerAlign from '@/components/centerAlign.vue';
 import flip from '@/components/flip.vue';
@@ -32,6 +33,7 @@ import cropperImg from '@/components/cropperImg.vue';
 import useSelectListen from '@/hooks/useSelectListen';
 
 const canvasEditor: any = inject('canvasEditor');
+const slidesBarShow: any = inject('slidesBarShow', ref(true));
 
 const { mixinState } = useSelectListen(canvasEditor);
 
@@ -54,14 +56,23 @@ const activeTitle = computed(() => {
   <div class="right-bar-container">
     <!-- 右侧悬浮打开按钮，在面板收起时显示 -->
     <Transition name="fade">
-      <div class="open-panel-btn" v-show="!attrBarShow" @click="switchAttrBar">
+      <div
+        class="open-panel-btn"
+        v-show="!attrBarShow"
+        :style="{ right: slidesBarShow ? '264px' : '15px' }"
+        @click="switchAttrBar"
+      >
         <Icon type="md-options" size="20" />
       </div>
     </Transition>
 
     <!-- 右侧属性面板 -->
     <Transition name="fade-slide-right">
-      <div class="right-bar" v-show="attrBarShow">
+      <div
+        class="right-bar"
+        v-show="attrBarShow"
+        :style="{ right: slidesBarShow ? '264px' : '12px' }"
+      >
         <!-- 面板头部 -->
         <div class="panel-header">
           <span class="panel-title">{{ activeTitle }}</span>
@@ -180,10 +191,9 @@ const activeTitle = computed(() => {
   }
 }
 
-// 右侧属性面板
 .right-bar {
   position: absolute;
-  right: 12px;
+  transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   top: 12px;
   bottom: 12px;
   width: 320px;
